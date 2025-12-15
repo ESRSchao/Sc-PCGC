@@ -1,0 +1,46 @@
+# Example configuration for Sc-PCGC
+
+# Model architecture parameters
+model:
+  d_model: 256          # Transformer model dimension
+  n_heads: 8            # Number of attention heads
+  n_layers: 6           # Number of transformer layers
+  d_ff: 1024           # Feed-forward dimension
+  dropout: 0.1          # Dropout rate
+
+# Octree structure parameters
+octree:
+  max_depth: 10         # Maximum octree depth
+  voxel_size: 0.1       # Voxel size for downsampling (meters)
+  min_points: 1         # Minimum points per leaf node
+
+# Priority mapping based on semantic importance
+priority:
+  semantic_weights:
+    car: 1.0           # High importance (dynamic objects)
+    pedestrian: 1.0    # High importance
+    cyclist: 0.9       # High importance
+    truck: 0.8         # High importance
+    building: 0.5      # Medium importance
+    vegetation: 0.3    # Low importance
+    road: 0.4          # Medium importance
+    sidewalk: 0.4      # Medium importance
+    other: 0.2         # Low importance
+
+# Compression parameters
+compression:
+  use_entropy_coding: true
+  quantization_bits: 10
+
+# Training parameters
+training:
+  batch_size: 4
+  learning_rate: 0.0001
+  num_epochs: 100
+  weight_decay: 0.00001
+
+# Dataset parameters
+data:
+  dataset: semantickitti
+  data_root: ./data/SemanticKITTI
+  num_workers: 4
