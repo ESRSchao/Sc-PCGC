@@ -129,14 +129,37 @@ class PriorityOctreeDecoder(nn.Module):
         Returns:
             Reconstructed point cloud [N, 3]
         """
-        # Decode octree
+        # If positions are directly available, use them
+        if 'positions' in encoded:
+            positions = encoded['positions']
+            occupancy = encoded['occupancy']
+            
+            # Handle batched input
+            if isinstance(positions, list):
+                positions = positions[0]
+                occupancy = occupancy[0]
+            
+            if positions.dim() > 2:
+                positions = positions.squeeze(0)
+                occupancy = occupancy.squeeze(0)
+            
+            # Filter by occupancy
+            mask = occupancy > 0
+            if mask.any():
+                points = positions[mask]
+            else:
+                # If no occupancy, return all positions
+                points = positions
+            
+            return points.cpu()
+        
+        # Fallback: decode octree and extract points
         octree = self.decode_octree(encoded)
         
-        # Extract points from leaf nodes
+        # Extract points from all nodes (not just leaves)
         points = []
-        for node in octree.get_leaf_nodes():
-            if len(node.points) > 0 or node.occupancy > 0:
-                # Use node center as reconstructed point
+        for node in octree.nodes:
+            if node.occupancy > 0 or len(node.points) > 0:
                 points.append(node.center)
         
         if len(points) == 0:

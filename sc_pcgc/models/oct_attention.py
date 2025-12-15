@@ -68,18 +68,20 @@ class PositionalEncoding3D(nn.Module):
         depth_enc = self.depth_embedding(depths)  # [B, N, d_model]
         
         # Spatial position encoding using sinusoidal functions
+        # Use standard sinusoidal encoding across all dimensions
         pos_enc = torch.zeros(batch_size, num_nodes, self.d_model, device=device)
         
-        # Encode x, y, z coordinates
-        for i in range(3):
-            pos_i = positions[:, :, i].unsqueeze(-1)  # [B, N, 1]
-            freq = self.freq.unsqueeze(0).unsqueeze(0)  # [1, 1, d_model//2]
-            
-            # Sinusoidal encoding
-            angles = pos_i * freq  # [B, N, d_model//2]
-            pos_enc[:, :, i::3] += torch.sin(angles)
-            if i + 1 < self.d_model:
-                pos_enc[:, :, (i + 1)::3] += torch.cos(angles)
+        # Flatten positions for encoding
+        positions_flat = positions.reshape(batch_size, num_nodes, 3)
+        
+        # Apply sinusoidal encoding
+        for dim_idx in range(self.d_model // 2):
+            freq = self.freq[dim_idx]
+            for coord_idx in range(3):
+                pos_coord = positions_flat[:, :, coord_idx]
+                angles = pos_coord * freq
+                pos_enc[:, :, dim_idx * 2] += torch.sin(angles) / 3.0
+                pos_enc[:, :, dim_idx * 2 + 1] += torch.cos(angles) / 3.0
         
         # Combine encodings
         encoding = depth_enc + pos_enc

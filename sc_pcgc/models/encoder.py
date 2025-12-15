@@ -93,26 +93,18 @@ class PriorityOctreeEncoder(nn.Module):
                 'priorities': torch.zeros(1, 0),
             }
         
-        # Extract node features
-        occupancy = torch.tensor(
-            [node.compute_occupancy() for node in nodes],
-            dtype=torch.float32
-        ).unsqueeze(0).unsqueeze(-1)  # [1, N, 1]
+        # Extract node features (convert to numpy first for efficiency)
+        occupancy_np = np.array([node.compute_occupancy() for node in nodes], dtype=np.float32)
+        occupancy = torch.from_numpy(occupancy_np).unsqueeze(0).unsqueeze(-1)  # [1, N, 1]
         
-        positions = torch.tensor(
-            [node.center for node in nodes],
-            dtype=torch.float32
-        ).unsqueeze(0)  # [1, N, 3]
+        positions_np = np.array([node.center for node in nodes], dtype=np.float32)
+        positions = torch.from_numpy(positions_np).unsqueeze(0)  # [1, N, 3]
         
-        depths = torch.tensor(
-            [node.depth for node in nodes],
-            dtype=torch.long
-        ).unsqueeze(0)  # [1, N]
+        depths_np = np.array([node.depth for node in nodes], dtype=np.int64)
+        depths = torch.from_numpy(depths_np).unsqueeze(0)  # [1, N]
         
-        priorities = torch.tensor(
-            [node.priority for node in nodes],
-            dtype=torch.float32
-        ).unsqueeze(0)  # [1, N]
+        priorities_np = np.array([node.priority for node in nodes], dtype=np.float32)
+        priorities = torch.from_numpy(priorities_np).unsqueeze(0)  # [1, N]
         
         # Encode using Oct-Attention
         context_features = self.oct_attention(occupancy, positions, depths)
@@ -124,6 +116,7 @@ class PriorityOctreeEncoder(nn.Module):
             'occupancy': (occupancy.squeeze(-1) > 0).long(),  # [1, N]
             'depths': depths,
             'priorities': priorities,
+            'positions': positions,  # Include positions for reconstruction
         }
         
         if return_context:
@@ -167,6 +160,7 @@ class PriorityOctreeEncoder(nn.Module):
             'contexts': [r['contexts'] for r in results],
             'depths': [r['depths'] for r in results],
             'priorities': [r['priorities'] for r in results],
+            'positions': [r['positions'] for r in results],
         }
         
         return batched_results
