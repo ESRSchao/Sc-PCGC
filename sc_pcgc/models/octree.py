@@ -140,6 +140,8 @@ class Octree:
         self.min_points = min_points
         self.root: Optional[OctreeNode] = None
         self.nodes: List[OctreeNode] = []
+        self.points: Optional[np.ndarray] = None
+        self.priorities: Optional[np.ndarray] = None
     
     def build(
         self,
@@ -155,6 +157,10 @@ class Octree:
         if len(points) == 0:
             return
         
+        # Store points for later reference
+        self.points = points
+        self.priorities = priorities if priorities is not None else np.ones(len(points))
+        
         # Compute bounding box
         min_bound = np.min(points, axis=0)
         max_bound = np.max(points, axis=0)
@@ -167,7 +173,7 @@ class Octree:
         
         # Insert points
         for i, point in enumerate(points):
-            priority = priorities[i] if priorities is not None else 1.0
+            priority = self.priorities[i]
             self._insert_point(self.root, point, i, priority)
     
     def _insert_point(
@@ -201,10 +207,13 @@ class Octree:
             node.points = []
             
             for idx in points_to_redistribute:
-                octant = node.get_octant(point)
+                # Get the actual point coordinates for this index
+                point_coords = self.points[idx]
+                point_priority = self.priorities[idx]
+                octant = node.get_octant(point_coords)
                 child = node.children[octant]
                 if child is not None:
-                    self._insert_point(child, point, idx, priority)
+                    self._insert_point(child, point_coords, idx, point_priority)
                     if child not in self.nodes:
                         self.nodes.append(child)
         

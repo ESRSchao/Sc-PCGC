@@ -75,13 +75,17 @@ class PositionalEncoding3D(nn.Module):
         positions_flat = positions.reshape(batch_size, num_nodes, 3)
         
         # Apply sinusoidal encoding
-        for dim_idx in range(self.d_model // 2):
+        # Ensure we don't exceed frequency buffer or model dimension
+        num_freq = min(self.d_model // 2, len(self.freq))
+        for dim_idx in range(num_freq):
             freq = self.freq[dim_idx]
             for coord_idx in range(3):
                 pos_coord = positions_flat[:, :, coord_idx]
                 angles = pos_coord * freq
-                pos_enc[:, :, dim_idx * 2] += torch.sin(angles) / 3.0
-                pos_enc[:, :, dim_idx * 2 + 1] += torch.cos(angles) / 3.0
+                # Ensure we don't exceed model dimension
+                if dim_idx * 2 + 1 < self.d_model:
+                    pos_enc[:, :, dim_idx * 2] += torch.sin(angles) / 3.0
+                    pos_enc[:, :, dim_idx * 2 + 1] += torch.cos(angles) / 3.0
         
         # Combine encodings
         encoding = depth_enc + pos_enc

@@ -97,18 +97,13 @@ def train_epoch(
         points = batch['points'].to(device)
         labels = batch['labels'].to(device)
         
-        # Compute priorities from labels
-        priorities = torch.ones_like(labels, dtype=torch.float32)
-        for i, label in enumerate(labels[0]):
-            # Simple priority mapping (can be improved)
-            if label == 1:  # car
-                priorities[0, i] = 1.0
-            elif label == 6:  # person
-                priorities[0, i] = 1.0
-            elif label in [9, 10, 11]:  # road, parking, sidewalk
-                priorities[0, i] = 0.4
-            else:
-                priorities[0, i] = 0.5
+        # Compute priorities from labels using the preprocessing module
+        from sc_pcgc.data.preprocessing import compute_semantic_priorities
+        priorities = torch.zeros_like(labels, dtype=torch.float32)
+        for b in range(labels.shape[0]):
+            labels_np = labels[b].cpu().numpy()
+            priorities_np = compute_semantic_priorities(labels_np)
+            priorities[b] = torch.from_numpy(priorities_np).to(device)
         
         optimizer.zero_grad()
         
@@ -166,7 +161,13 @@ def validate(model, dataloader, device, epoch, writer):
             points = batch['points'].to(device)
             labels = batch['labels'].to(device)
             
-            priorities = torch.ones_like(labels, dtype=torch.float32) * 0.5
+            # Compute priorities from labels using the preprocessing module
+            from sc_pcgc.data.preprocessing import compute_semantic_priorities
+            priorities = torch.zeros_like(labels, dtype=torch.float32)
+            for b in range(labels.shape[0]):
+                labels_np = labels[b].cpu().numpy()
+                priorities_np = compute_semantic_priorities(labels_np)
+                priorities[b] = torch.from_numpy(priorities_np).to(device)
             
             # Forward pass
             reconstructed, encoded = model(points, priorities)
